@@ -268,7 +268,7 @@ export class Api extends EventEmitter {
             } catch (e) {}
           }
           let status = xhr.status;
-          if (status === 202 && body && body._status > 0) {
+          if (body && body._status) {
             status = body._status;
           }
 
@@ -335,7 +335,7 @@ export class Api extends EventEmitter {
           }
 
           let status = response.status;
-          if (status === 202 && body && body._status > 0) {
+          if (body && body._status) {
             status = body._status;
           }
 
