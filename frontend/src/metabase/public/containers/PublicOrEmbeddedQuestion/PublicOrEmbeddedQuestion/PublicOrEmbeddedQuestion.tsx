@@ -164,7 +164,11 @@ export const PublicOrEmbeddedQuestion = ({
         throw { status: 404 };
       }
 
-      setResult(newResult as Dataset);
+      if (newResult.error) {
+        dispatch(setErrorPage(newResult.error));
+      } else {
+        setResult(newResult as Dataset);
+      }
     } catch (error) {
       console.error("error", error);
       dispatch(setErrorPage(error));
