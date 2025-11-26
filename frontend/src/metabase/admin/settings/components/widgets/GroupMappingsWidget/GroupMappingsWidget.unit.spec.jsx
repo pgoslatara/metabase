@@ -14,24 +14,23 @@ const setup = ({
   clearGroupMember = jest.fn(),
   deleteGroup = jest.fn(),
   updateSetting = jest.fn(),
-  onSuccess = jest.fn(),
-  setting = { key: "key", value: true },
+  settingKey = "ldap-group-sync",
+  initialSyncEnabled = true,
   groups = defaultGroups,
 } = {}) => {
   render(
     <FormProvider
-      initialValues={{ [setting.key]: setting.value }}
+      initialValues={{ [settingKey]: initialSyncEnabled }}
       onSubmit={() => {}}
     >
       <GroupMappingsWidgetView
         allGroups={groups}
         mappings={mappings}
         mappingSetting={mappingSetting}
-        setting={setting}
+        settingKey={settingKey}
         clearGroupMember={clearGroupMember}
         deleteGroup={deleteGroup}
         updateSetting={updateSetting}
-        onSuccess={onSuccess}
       />
     </FormProvider>,
   );
@@ -69,12 +68,13 @@ describe("GroupMappingsWidgetView", () => {
       setup({
         mappingSetting: "jwt-group-mappings",
         mappings: {},
-        setting: { key: "jwt-group-sync", value: true },
+        settingKey: "jwt-group-sync",
+        initialSyncEnabled: true,
       });
 
       expect(
         await screen.findByText(
-          "No mappings yet, groups will be automatically assgined by exactly matching names",
+          "No mappings yet, groups will be automatically assigned by exactly matching names",
         ),
       ).toBeInTheDocument();
     });
@@ -83,7 +83,8 @@ describe("GroupMappingsWidgetView", () => {
       setup({
         mappingSetting: "jwt-group-mappings",
         mappings: {},
-        setting: { key: "jwt-group-sync", value: false },
+        settingKey: "jwt-group-sync",
+        initialSyncEnabled: false,
       });
 
       expect(

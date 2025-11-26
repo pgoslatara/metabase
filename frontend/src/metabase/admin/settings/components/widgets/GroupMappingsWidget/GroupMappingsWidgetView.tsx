@@ -3,37 +3,41 @@ import { useState } from "react";
 import { t } from "ttag";
 import _ from "underscore";
 
-import type { MappingsType, UserGroupsType } from "metabase/admin/types";
+import type {
+  MappingsType,
+  UserGroupType,
+  UserGroupsType,
+} from "metabase/admin/types";
 import { AdminContentTable } from "metabase/common/components/AdminContentTable";
 import { FormSwitch } from "metabase/forms";
 import { isDefaultGroup } from "metabase/lib/groups";
-import { Button, Flex, Icon, Stack, Text, Tooltip } from "metabase/ui";
+import { Box, Button, Flex, Icon, Stack, Text, Tooltip } from "metabase/ui";
+import type { EnterpriseSettingKey } from "metabase-types/api";
 
 import AddMappingRow from "./AddMappingRow";
 import S from "./GroupMappingsWidget.module.css";
 import { MappingRow } from "./MappingRow";
 
-const groupIsMappable = (group: { name: string }) => !isDefaultGroup(group);
+const groupIsMappable = (group: UserGroupType) => !isDefaultGroup(group);
 
-const helpText = (mappingSetting: string) => {
+const helpText = (mappingSetting: EnterpriseSettingKey) => {
   if (mappingSetting === "jwt-group-mappings") {
     return t`Mappings allow Metabase to automatically add and remove users from groups based on the membership information provided by the directory server. If no mappings are defined, groups will automatically be assigned based on exactly matching names.`;
   }
   return t`Mappings allow Metabase to automatically add and remove users from groups based on the membership information provided by the directory server. If a group isn't mapped, its membership won't be synced.`;
 };
 
-const noMappingText = (mappingSetting: string, syncSwitchValue: boolean) => {
+const noMappingText = (
+  mappingSetting: EnterpriseSettingKey,
+  syncSwitchValue: boolean,
+) => {
   if (!syncSwitchValue) {
     return t`No mappings yet, group sync is not on`;
   }
   if (mappingSetting === "jwt-group-mappings") {
-    return t`No mappings yet, groups will be automatically assgined by exactly matching names`;
+    return t`No mappings yet, groups will be automatically assigned by exactly matching names`;
   }
   return t`No mappings yet`;
-};
-
-type SettingType = {
-  key: string;
 };
 
 type SaveError = {
@@ -46,12 +50,12 @@ type GroupMappingsWidgetViewProps = {
   groupHeading: string;
   groupPlaceholder: string;
   allGroups?: UserGroupsType;
-  mappingSetting: string;
+  mappingSetting: EnterpriseSettingKey;
   deleteGroup: (args: { id: number }) => Promise<void>;
   clearGroupMember: (args: { id: number }) => Promise<void>;
   updateSetting: (args: { key: string; value: MappingsType }) => Promise<void>;
   mappings: MappingsType;
-  setting: SettingType;
+  settingKey: EnterpriseSettingKey;
 };
 
 export function GroupMappingsWidgetView({
@@ -63,7 +67,7 @@ export function GroupMappingsWidgetView({
   clearGroupMember,
   updateSetting,
   mappings,
-  setting,
+  settingKey,
 }: GroupMappingsWidgetViewProps) {
   const [showAddRow, setShowAddRow] = useState(false);
   const [saveError, setSaveError] = useState<SaveError>({});
@@ -125,18 +129,18 @@ export function GroupMappingsWidgetView({
         value: mappingsMinusDeletedMapping,
       });
 
-      onSuccess && (await onSuccess());
+      onSuccess?.();
       setSaveError(null);
     } catch (error) {
       setSaveError(error as SaveError);
     }
   };
 
-  const [{ value: groupSyncSwitchValue }] = useField(setting.key);
+  const [{ value: groupSyncSwitchValue }] = useField(settingKey);
 
   return (
     <Stack w="100%" gap={0}>
-      <div className={S.root}>
+      <Box className={S.root}>
         <Flex justify="space-between" align="center" className={S.header}>
           <Flex align="center" gap="sm">
             <Text
@@ -146,7 +150,7 @@ export function GroupMappingsWidgetView({
             >{t`Synchronize Group Memberships`}</Text>
             <FormSwitch
               data-testid="group-sync-switch"
-              name={setting.key}
+              name={settingKey}
               pr="sm"
             />
           </Flex>
@@ -158,7 +162,7 @@ export function GroupMappingsWidgetView({
           </Tooltip>
         </Flex>
 
-        <div>
+        <Box>
           {!showAddRow && (
             <Button
               className={S.addMappingButton}
@@ -212,8 +216,8 @@ export function GroupMappingsWidgetView({
               ) : null;
             })}
           </AdminContentTable>
-        </div>
-      </div>
+        </Box>
+      </Box>
       {saveError?.data?.message && (
         <Text c="error" fw={700} m="sm">
           {saveError.data.message}
