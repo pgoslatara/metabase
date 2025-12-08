@@ -14,6 +14,7 @@ import {
   isAdminGroup,
   isDefaultGroup,
 } from "metabase/lib/groups";
+import { isNotNull } from "metabase/lib/types";
 import { Box, Checkbox, Flex, Icon, Popover, Stack, Text } from "metabase/ui";
 
 type GroupSelectProps = {
@@ -32,9 +33,7 @@ type GroupSection = {
 function getSections(groups: UserGroupsType): GroupSection[] {
   const adminGroup = groups.find(isAdminGroup);
   const defaultGroup = groups.find(isDefaultGroup);
-  const topGroups = [defaultGroup, adminGroup].filter(
-    (g): g is UserGroupType => g != null,
-  );
+  const topGroups = [defaultGroup, adminGroup].filter(isNotNull);
   const groupsExceptDefaultAndAdmin = groups.filter(
     (g) => !isAdminGroup(g) && !isDefaultGroup(g),
   );
