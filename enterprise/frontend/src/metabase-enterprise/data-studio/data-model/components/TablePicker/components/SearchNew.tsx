@@ -96,7 +96,8 @@ export function SearchNew({
   filters,
   onChange,
 }: SearchNewProps) {
-  const { resetSelection } = useSelection();
+  const { resetSelection, filterSelectedTables } = useSelection();
+
   const routeParams = parseRouteParams(params);
   const { data: tables, isLoading: isLoadingTables } = useListTablesQuery({
     term: query,
@@ -130,8 +131,10 @@ export function SearchNew({
       return [];
     }
 
+    filterSelectedTables(tables.map((table) => table.id));
+
     return tables.filter((table) => allowedDatabaseIds.has(table.db_id));
-  }, [allowedDatabaseIds, tables]);
+  }, [allowedDatabaseIds, tables, filterSelectedTables]);
 
   const isLoading = isLoadingTables || isLoadingDatabases;
 
