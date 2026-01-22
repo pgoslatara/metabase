@@ -143,6 +143,16 @@ export function SearchNew({
     [filteredTables],
   );
 
+  // when search is loaded, let's reset the active table, as it often might not even be visible in search results
+  //  that leads to confusion and has no added benefit
+  useEffect(() => {
+    onChange?.({
+      databaseId: undefined,
+      schemaName: undefined,
+      tableId: undefined,
+    });
+  }, [onChange]);
+
   useEffect(() => {
     resetSelection();
   }, [query, filters, resetSelection]);
