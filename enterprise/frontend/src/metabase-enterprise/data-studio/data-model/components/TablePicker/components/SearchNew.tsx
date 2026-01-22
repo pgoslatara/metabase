@@ -99,7 +99,11 @@ export function SearchNew({
   const { resetSelection, filterSelectedTables } = useSelection();
 
   const routeParams = parseRouteParams(params);
-  const { data: tables, isLoading: isLoadingTables } = useListTablesQuery({
+  const {
+    data: tables,
+    isLoading: isLoadingTables,
+    isFetching: isFetchingTables,
+  } = useListTablesQuery({
     term: query,
     "data-layer": filters.dataLayer ?? undefined,
     "data-source":
@@ -143,15 +147,22 @@ export function SearchNew({
     [filteredTables],
   );
 
-  // when search is loaded, let's reset the active table, as it often might not even be visible in search results
-  //  that leads to confusion and has no added benefit
+  // when active table is not present in search results, let's reset the active table
   useEffect(() => {
-    onChange?.({
-      databaseId: undefined,
-      schemaName: undefined,
-      tableId: undefined,
-    });
-  }, [onChange]);
+    if (isFetchingTables || routeParams.tableId === undefined) {
+      return;
+    }
+    const isActiveTableVisible = filteredTables.some(
+      (table) => table.id === routeParams.tableId,
+    );
+    if (!isActiveTableVisible) {
+      onChange?.({
+        databaseId: undefined,
+        schemaName: undefined,
+        tableId: undefined,
+      });
+    }
+  }, [filteredTables, routeParams.tableId, onChange, isFetchingTables]);
 
   useEffect(() => {
     resetSelection();
