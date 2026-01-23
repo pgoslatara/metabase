@@ -12,7 +12,10 @@
    [toucan2.core :as t2]))
 
 (defn- default-schema* []
-  (and driver/*driver* (driver.sql/default-schema driver/*driver*)) "public")
+  (let [driver (or driver/*driver* (:engine (mt/db)))]
+    (or (sql.tx/session-schema driver)
+        (driver.sql/default-schema driver)
+        "public")))
 
 (defn- make-transform [query & [name schema]]
   (let [name (or name (mt/random-name))
@@ -365,7 +368,7 @@
 (defn- make-python-transform
   "Create a python transform definition with the given source-tables and target name."
   [source-tables target-name & [target-schema]]
-  (let [schema (or target-schema (driver.sql/default-schema (or driver/*driver* (:engine (mt/db)))))]
+  (let [schema (or target-schema (default-schema*))]
     {:source {:type "python"
               :source-database (mt/id)
               :source-tables source-tables
