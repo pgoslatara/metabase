@@ -31,14 +31,15 @@
 
 (defn- translate-result
   "Translate result from real IDs back to shorthand notation for easier comparison."
-  [{:keys [inputs outputs entities dependencies] :as _result} id-map]
+  [workspace-id {:keys [inputs outputs entities dependencies] :as _result} id-map]
   (let [reverse-map (u/for-map [[k v] id-map] [v k])
         table->kw   (comp reverse-map :id)
         node->kw    (fn [{:keys [node-type id]}]
                       (reverse-map (case node-type
                                      :table (:id id)
                                      :external-transform id
-                                     :workspace-transform (t2/select-one-fn :global_id [:model/WorkspaceTransform :global_id] :ref_id id))))]
+                                     :workspace-transform (t2/select-one-fn :global_id [:model/WorkspaceTransform :global_id]
+                                                                            :workspace_id workspace-id :ref_id id))))]
     {:inputs       (into #{} (map table->kw) inputs)
      :outputs      (into #{} (map table->kw) outputs)
      :entities     (into #{} (map node->kw) entities)
@@ -56,7 +57,7 @@
       (ws.tu/analyze-workspace! workspace-id)
       (let [entity     {:entity-type :transform, :id (workspace-map :x2)}
             result     (ws.dag/path-induced-subgraph workspace-id [entity])
-            translated (translate-result result global-map)]
+            translated (translate-result workspace-id result global-map)]
         (is (=? {:inputs       #{:t1}
                  :outputs      #{:t2}
                  :entities     #{:x2}
@@ -78,7 +79,7 @@
       (let [entities   (for [tx [:x2 :x4]]
                          {:entity-type :transform, :id (workspace-map tx)})
             result     (ws.dag/path-induced-subgraph workspace-id entities)
-            translated (translate-result result global-map)]
+            translated (translate-result workspace-id result global-map)]
         (is (=? {:inputs       #{:t1 :t8 :t10}
                  :outputs      #{:t2 :t3 :t4}
                  :entities     #{:x2 :x3 :x4}
@@ -121,32 +122,92 @@
             {:check-outs   #{:x3 :m6 :m10 :m13}
              :dependencies (dag-abstract/expand-shorthand example-graph)})))))
 
-;;;; Card dependency detection tests
+;;;; Graph utility tests
 
-(deftest unsupported-dependency-no-transforms-test
-  (testing "empty input returns nil"
-    (is (nil? (ws.dag/unsupported-dependency? {})))
-    (is (nil? (ws.dag/unsupported-dependency? {:transforms []})))))
+(deftest reverse-graph-test
+  (testing "empty graph"
+    (is (= {} (ws.dag/reverse-graph {}))))
 
-(deftest unsupported-dependency-mbql-card-test
-  #_(testing "transform with card dependencies are unsupported"
-      (let [tx-with-no-dependencies               1
-             ;; These tests transforms must seem pretty redundant - but it's intentional: we may relax them one case at
-             ;; at time in the future.
-             ;; ----------------------
-             ;; We don't allow MBQL card dependencies, as we do not support re-mapping their references on execution.
-             ;; This is only a problem if the card depends on a table that is shadowed in the isolated schema, but we
-             ;; want to keep the semantics simple.
-            tx-with-direct-mbql-card-dependency   2
-             ;; Even a transitive dependency would need to be remapped.
-            tx-with-indirect-mbql-card-dependency 3
-             ;; In fact, we don't allow *any* card dependency for two reasons:
-             ;; 1. We don't yet support reference re-mapping across entity references.
-             ;; 2. It's an anti-pattern to build transforms on models, the relationship is intended to be the other way
-             ;;    around.
-            tx-with-sql-card-dependency           4]
-        (is (= nil (ws.dag/unsupported-dependency? {:transforms [1]})))
-        (is (= {:transforms [2 3 4]} (ws.dag/unsupported-dependency? {:transforms [1 2 3 4]}))))))
+  (testing "single edge"
+    (is (= {:a [:b]}
+           (ws.dag/reverse-graph {:b [:a]}))))
+
+  (testing "chain graph - reverses direction"
+    (is (= {:a [:b], :b [:c], :c [:d]}
+           (ws.dag/reverse-graph {:b [:a], :c [:b], :d [:c]}))))
+
+  (testing "diamond graph - a -> b -> d, a -> c -> d"
+    (is (= {:a [:b :c], :b [:d], :c [:d]}
+           (ws.dag/reverse-graph {:b [:a], :c [:a], :d [:b :c]}))))
+
+  (testing "multiple parents become multiple children - x has parents [a b c] => a, b, c each get child x"
+    (is (= {:a [:x], :b [:x], :c [:x]}
+           (ws.dag/reverse-graph {:x [:a :b :c]})))))
+
+(deftest bfs-reduce-test
+  (testing "empty adjacency returns empty"
+    (is (= [] (ws.dag/bfs-reduce {} [:a]))))
+
+  (testing "no neighbors returns empty"
+    (is (= [] (ws.dag/bfs-reduce {:a []} [:a]))))
+
+  (testing "single hop"
+    (is (= [:b :c]
+           (ws.dag/bfs-reduce {:a [:b :c]} [:a]))))
+
+  (testing "chain traversal - collects all reachable nodes"
+    (let [graph {:a [:b], :b [:c], :c [:d], :d []}]
+      (is (= [:b :c :d] (ws.dag/bfs-reduce graph [:a])))
+      (is (= [:c :d] (ws.dag/bfs-reduce graph [:b])))
+      (is (= [:d] (ws.dag/bfs-reduce graph [:c])))
+      (is (= [] (ws.dag/bfs-reduce graph [:d])))))
+
+  (testing "diamond graph - no duplicates (a -> b -> d, a -> c -> d)"
+    (let [graph {:a [:b :c], :b [:d], :c [:d], :d []}]
+      (is (= [:b :c :d] (ws.dag/bfs-reduce graph [:a])))))
+
+  (testing "works with map nodes (like workspace transform nodes)"
+    (let [tx1 {:node-type :workspace-transform :id "tx1"}
+          tx2 {:node-type :workspace-transform :id "tx2"}
+          tx3 {:node-type :workspace-transform :id "tx3"}
+          tbl {:node-type :table :id {:db 1 :schema "public" :table "foo"}}
+          graph {tx1 [tx2 tbl], tx2 [tx3], tx3 [], tbl []}]
+      (is (= [tx2 tbl tx3] (ws.dag/bfs-reduce graph [tx1])))
+      (is (= [tx3] (ws.dag/bfs-reduce graph [tx2])))))
+
+  (testing "handles cycles gracefully - a -> b -> c -> a (cycle), should not infinite loop"
+    (let [graph {:a [:b], :b [:c], :c [:a]}]
+      (is (= [:b :c :a] (ws.dag/bfs-reduce graph [:a])))))
+
+  (testing "include-start? option"
+    (let [graph {:a [:b], :b [:c], :c []}]
+      (is (= [:a :b :c] (ws.dag/bfs-reduce graph [:a] :include-start? true)))
+      (is (= [:b :c] (ws.dag/bfs-reduce graph [:a] :include-start? false)))))
+
+  (testing "multiple start nodes"
+    (let [graph {:a [:x], :b [:y], :x [], :y []}]
+      (is (= [:x :y] (ws.dag/bfs-reduce graph [:a :b])))
+      (is (= [:a :b :x :y] (ws.dag/bfs-reduce graph [:a :b] :include-start? true)))))
+
+  (testing "traverses through different node types"
+    (let [tx1 {:node-type :workspace-transform :id "tx1"}
+          tx2 {:node-type :workspace-transform :id "tx2"}
+          ext {:node-type :external-transform :id "ext"}
+          graph {tx1 [ext], ext [tx2], tx2 []}]
+      (is (= [ext tx2] (ws.dag/bfs-reduce graph [tx1])))))
+
+  (testing "custom :init collects into a set"
+    (let [graph {:a [:b :c], :b [:d], :c [:d], :d []}]
+      (is (= #{:b :c :d} (ws.dag/bfs-reduce graph [:a] :init #{})))
+      (is (= #{:a :b :c :d} (ws.dag/bfs-reduce graph [:a] :init #{} :include-start? true)))))
+
+  (testing "custom :rf filters during traversal"
+    (let [tx1 {:node-type :workspace-transform :id "t1"}
+          tx2 {:node-type :workspace-transform :id "t2"}
+          tbl {:node-type :table :id "tbl"}
+          graph {tx1 [tx2 tbl], tx2 [], tbl []}
+          xf (keep #(when (= :workspace-transform (:node-type %)) (:id %)))]
+      (is (= ["t2"] (ws.dag/bfs-reduce graph [tx1] :rf (xf conj)))))))
 
 (deftest collapse-test
   (is (= {:x1 [:x2 :x3]
