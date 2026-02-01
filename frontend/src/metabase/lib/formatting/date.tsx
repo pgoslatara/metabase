@@ -1072,7 +1072,7 @@ export function formatDateTimeRangeWithUnit(
     );
 
     // Fix for day-of-year formatting: replace DDD and DDDo with custom formatting
-    // because dayjs DDD format token doesn't work like moment's DDD
+    // because dayjs DDD format token requires the dayOfYear plugin
     if (processedFormat.includes("DDDo")) {
       const dayOfYear = date.dayOfYear();
       const ordinal = dayjs().localeData().ordinal(dayOfYear);

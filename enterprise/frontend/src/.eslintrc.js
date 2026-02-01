@@ -18,14 +18,6 @@ const baseRestrictedConfig = {
       message: "Please import from `metabase/ui` instead.",
     },
     {
-      name: "moment",
-      message: "Moment is deprecated, please use dayjs",
-    },
-    {
-      name: "moment-timezone",
-      message: "Moment is deprecated, please use dayjs",
-    },
-    {
       name: "@storybook/test",
       message:
         "Please use `testing-library/react` or `@testing-library/user-event`",

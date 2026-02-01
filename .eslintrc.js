@@ -38,21 +38,7 @@ module.exports = {
     // Note: adding this rule to a eslint config file in a subfolder will remove
     // *not* carry over the restricted imports from parent folders, you will
     // need to copy them over
-    "no-restricted-imports": [
-      "error",
-      {
-        paths: [
-          {
-            name: "moment",
-            message: "Moment is deprecated, please use dayjs",
-          },
-          {
-            name: "moment-timezone",
-            message: "Moment is deprecated, please use dayjs",
-          },
-        ],
-      },
-    ],
+    "no-restricted-imports": "off",
     curly: [1, "all"],
     eqeqeq: [1, "smart"],
     "import/no-duplicates": ["warn", { considerQueryString: true }],
@@ -192,7 +178,6 @@ module.exports = {
           {
             allowed: [
               "underscore",
-              "moment",
               "lodash.orderby",
               "lodash.debounce",
             ],

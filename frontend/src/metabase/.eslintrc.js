@@ -31,14 +31,6 @@ const baseRestrictedConfig = {
       message: "Please import from `metabase/ui` instead.",
     },
     {
-      name: "moment",
-      message: "Moment is deprecated, please use dayjs",
-    },
-    {
-      name: "moment-timezone",
-      message: "Moment is deprecated, please use dayjs",
-    },
-    {
       name: "@emotion/styled",
       message: "Please style components using css modules.",
     },
@@ -124,14 +116,6 @@ module.exports = {
               "cljs/metabase.lib*",
             ],
             paths: [
-              {
-                name: "moment",
-                message: "Moment is deprecated, please use dayjs",
-              },
-              {
-                name: "moment-timezone",
-                message: "Moment is deprecated, please use dayjs",
-              },
               {
                 name: "@emotion/styled",
                 message: "Please style components using css modules.",

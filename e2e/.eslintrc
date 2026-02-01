@@ -17,14 +17,6 @@
       {
         "paths": [
           {
-            "name": "moment",
-            "message": "Moment is deprecated, please use dayjs"
-          },
-          {
-            "name": "moment-timezone",
-            "message": "Moment is deprecated, please use dayjs"
-          },
-          {
             // mocks/presets is for unit tests
             "name": "metabase-types/api/mocks/presets",
             "message": "Please use e2e/support/cypress_sample_database instead"
