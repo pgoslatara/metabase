@@ -165,6 +165,14 @@ function DataStudioNav({ isNavbarOpened, onNavbarToggle }: DataStudioNavProps) {
             showLabel={isNavbarOpened}
             isGated={!hasDependenciesFeature}
           />
+          <DataStudioTab
+            label={t`ERD`}
+            icon="model"
+            to={Urls.dataStudioErdBase()}
+            isSelected={currentTab === "erd"}
+            showLabel={isNavbarOpened}
+            isGated={!hasDependenciesFeature}
+          />
           {(canAccessTransforms || isAdmin) && (
             <DataStudioTab
               label={t`Transforms`}
