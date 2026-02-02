@@ -305,14 +305,19 @@
     {:content-type content-type
      :bytes        (u.jvm/decode-base64-to-bytes base64-data)}))
 
-(defn- logo-bundle
+(defn logo-bundle
   "Create a logo bundle from the application logo URL.
    Returns {:image-src <url-or-cid> :attachment <attachment-map-or-nil>}.
-   For data URIs, converts to an embedded attachment for email compatibility."
+   For data URIs, converts to an embedded attachment for email compatibility.
+   For the default logo asset path, uses the static Metabase logo URL."
   [logo-url]
   (cond
     (nil? logo-url)
     nil
+
+    (= logo-url "app/assets/img/logo.svg")
+    {:image-src  "http://static.metabase.com/email_logo.png"
+     :attachment nil}
 
     (str/starts-with? logo-url "data:")
     (when-let [{:keys [bytes]} (parse-data-uri logo-url)]
