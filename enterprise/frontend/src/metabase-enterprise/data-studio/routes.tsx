@@ -8,9 +8,8 @@ import {
   PLUGIN_FEATURE_LEVEL_PERMISSIONS,
   PLUGIN_TRANSFORMS,
 } from "metabase/plugins";
-import type { State } from "metabase-types/store";
-
 import { ErdPage } from "metabase-enterprise/dependencies/pages/ErdPage";
+import type { State } from "metabase-types/store";
 
 import { DataSectionLayout } from "./app/pages/DataSectionLayout";
 import { DataStudioLayout } from "./app/pages/DataStudioLayout";
