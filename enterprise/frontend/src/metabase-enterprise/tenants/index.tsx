@@ -356,7 +356,8 @@ export function initializePlugin() {
         { id: "root", namespace: "tenant-specific" },
         { skip: !useTenants || isTenantUser || isAdmin },
       );
-      const canAccessTenantSpecific = isAdmin || !!tenantSpecificRoot;
+      const canAccessTenantSpecificCollections =
+        isAdmin || !!tenantSpecificRoot;
 
       // Non-admins can create shared collections if they have curate permissions on the root shared collection
       const canCreateSharedCollection =
@@ -368,10 +369,10 @@ export function initializePlugin() {
         !isTenantUser &&
         (hasVisibleSharedCollections ||
           canCreateSharedCollection ||
-          canAccessTenantSpecific);
+          canAccessTenantSpecificCollections);
 
       return {
-        canAccessTenantSpecific,
+        canAccessTenantSpecificCollections,
         canCreateSharedCollection,
         showExternalCollectionsSection,
         sharedTenantCollections,
