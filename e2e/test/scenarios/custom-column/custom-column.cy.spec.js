@@ -701,13 +701,11 @@ describe("scenarios > question > custom column", () => {
 
     // `1+1` (3 chars) is reformatted to `1 + 1` (5 chars)
     H.CustomExpressionEditor.focus();
-    const isMac = Cypress.platform === "darwin";
-    const metaKey = isMac ? "Meta" : "Control";
 
     H.CustomExpressionEditor.formatButton().should("be.visible");
     H.CustomExpressionEditor.get()
       .get(".cm-editor")
-      .realPress(["Shift", metaKey, "f"]);
+      .realPress(["Shift", H.metaKey, "f"]);
     H.CustomExpressionEditor.value().should("equal", "1 + 1");
 
     // Make sure the cursor is at the end of the expression
@@ -722,10 +720,8 @@ describe("scenarios > question > custom column", () => {
     H.enterCustomColumnDetails({ formula: "1+" });
 
     H.CustomExpressionEditor.focus();
-    const isMac = Cypress.platform === "darwin";
-    const metaKey = isMac ? "Meta" : "Control";
 
-    cy.realPress(["Shift", metaKey, "f"]);
+    cy.realPress(["Shift", H.metaKey, "f"]);
     H.CustomExpressionEditor.value().should("equal", "1+");
 
     // Make sure the cursor is at the end of the expression

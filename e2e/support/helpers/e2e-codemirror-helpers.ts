@@ -1,3 +1,5 @@
+import { metaKey } from "./e2e-boolean-helpers";
+
 type TypeOptions = {
   delay?: number;
   focus?: boolean;
@@ -20,8 +22,6 @@ export function codeMirrorHelpers<T extends object>(testId: string, extra: T) {
       return helpers;
     },
     selectAll() {
-      const isMac = Cypress.platform === "darwin";
-      const metaKey = isMac ? "Meta" : "Control";
       helpers.focus();
       cy.realPress([metaKey, "A"]);
       return helpers;
@@ -52,9 +52,6 @@ export function codeMirrorHelpers<T extends object>(testId: string, extra: T) {
 
         return helpers;
       }
-
-      const isMac = Cypress.platform === "darwin";
-      const metaKey = isMac ? "Meta" : "Control";
 
       const parts = text.replaceAll("{{", "{{}{{}").split(/(\{[^}]+\})/);
 
