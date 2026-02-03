@@ -61,6 +61,7 @@
    [goog.object :as gobject]
    [medley.core :as m]
    ^{:clj-kondo/ignore [:discouraged-namespace]} [metabase.legacy-mbql.normalize :as mbql.normalize]
+   [metabase.lib.binning :as lib.binning]
    [metabase.lib.cache :as lib.cache]
    [metabase.lib.convert :as lib.convert]
    [metabase.lib.core :as lib.core]
@@ -537,6 +538,19 @@
   ([a-query stage-number x]
    (-> (lib.core/available-binning-strategies a-query stage-number x)
        to-array)))
+
+(defn ^:export numeric-binning-strategies
+  "Returns the list of binning options for numeric fields. These split the data evenly into a fixed number of bins.
+  Returns opaque values that can be passed to [[display-info]] for rendering."
+  []
+  (to-array (map clj->js (lib.binning/numeric-binning-strategies))))
+
+(defn ^:export coordinate-binning-strategies
+  "Returns the list of binning options for coordinate fields (latitude/longitude).
+  These split the data into ranges of a certain number of degrees.
+  Returns opaque values that can be passed to [[display-info]] for rendering."
+  []
+  (to-array (map clj->js (lib.binning/coordinate-binning-strategies))))
 
 ;; ## Temporal Bucketing
 
