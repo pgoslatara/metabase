@@ -4,7 +4,8 @@
    [clojure.test :refer :all]
    [metabase-enterprise.data-studio.api.table :as api.table]
    [metabase.collections.models.collection :as collection]
-   [metabase.collections.test-helpers :refer [without-library]]
+   [metabase.collections.test-utils :refer [without-library]]
+   [metabase.permissions.models.permissions-group :as perms-group]
    [metabase.sync.core :as sync]
    [metabase.test :as mt]
    [metabase.test.fixtures :as fixtures]
@@ -16,7 +17,7 @@
 (use-fixtures :once (fixtures/initialize :db))
 
 (deftest publish-table-test
-  (mt/with-premium-features #{:data-studio}
+  (mt/with-premium-features #{:data-studio :audit-app}
     (without-library
      (testing "POST /api/ee/data-studio/table/(un)publish-table"
        (testing "publishes tables into the library-data collection"
@@ -35,6 +36,11 @@
                          :collection_id collection-id
                          :is_published true}]
                        (t2/select :model/Table :id [:in [(mt/id :users) (mt/id :venues)]] {:order-by [:display_name]}))))
+             (testing "audit log entries are created for publish"
+               (is (=? {:topic :table-publish, :model "Table", :model_id (mt/id :users)}
+                       (mt/latest-audit-log-entry "table-publish" (mt/id :users))))
+               (is (=? {:topic :table-publish, :model "Table", :model_id (mt/id :venues)}
+                       (mt/latest-audit-log-entry "table-publish" (mt/id :venues)))))
              (testing "unpublishing"
                (testing "normal users are not allowed"
                  (mt/user-http-request :rasta :post 403 "ee/data-studio/table/unpublish-tables"
@@ -44,22 +50,25 @@
                (is (=? {:display_name "Venues"
                         :collection_id nil
                         :is_published false}
-                       (t2/select-one :model/Table (mt/id :venues)))))))
-         (testing "deleting the collection unpublishes"
-           (is (=? {:display_name "Users"
-                    :collection_id nil
-                    :is_published false}
-                   (t2/select-one :model/Table (mt/id :users))))))
-       (testing "returns 404 when no library-data collection exists"
-         (is (= "Not found."
-                (mt/user-http-request :crowberto :post 404 "ee/data-studio/table/publish-tables"
-                                      {:table_ids [(mt/id :users)]}))))
-       (testing "returns 409 when multiple library-data collections exist"
-         (mt/with-temp [:model/Collection _ {:type collection/library-data-collection-type}
-                        :model/Collection _ {:type collection/library-data-collection-type}]
-           (is (= "Multiple library-data collections found."
-                  (mt/user-http-request :crowberto :post 409 "ee/data-studio/table/publish-tables"
-                                        {:table_ids [(mt/id :users)]})))))))))
+                       (t2/select-one :model/Table (mt/id :venues))))
+               (testing "audit log entry is created for unpublish"
+                 (is (=? {:topic :table-unpublish, :model "Table", :model_id (mt/id :venues)}
+                         (mt/latest-audit-log-entry "table-unpublish" (mt/id :venues)))))))))
+       (testing "deleting the collection unpublishes"
+         (is (=? {:display_name "Users"
+                  :collection_id nil
+                  :is_published false}
+                 (t2/select-one :model/Table (mt/id :users))))))
+     (testing "returns 404 when no library-data collection exists"
+       (is (= "Not found."
+              (mt/user-http-request :crowberto :post 404 "ee/data-studio/table/publish-tables"
+                                    {:table_ids [(mt/id :users)]}))))
+     (testing "returns 409 when multiple library-data collections exist"
+       (mt/with-temp [:model/Collection _ {:type collection/library-data-collection-type}
+                      :model/Collection _ {:type collection/library-data-collection-type}]
+         (is (= "Multiple library-data collections found."
+                (mt/user-http-request :crowberto :post 409 "ee/data-studio/table/publish-tables"
+                                      {:table_ids [(mt/id :users)]}))))))))
 
 (deftest bulk-edit-visibility-sync-test
   (mt/with-premium-features #{:data-studio}
@@ -98,6 +107,59 @@
            (:message (mt/user-http-request :crowberto :post 402 "ee/data-studio/table/edit"
                                            {:table_ids  [(mt/id :users)]
                                             :data_layer "gold"}))))))
+
+(deftest data-analyst-can-access-endpoints-test
+  (mt/with-premium-features #{:data-studio}
+    (testing "Data analysts (members of Data Analysts group) can access data studio endpoints"
+      (let [data-analyst-group-id (:id (perms-group/data-analyst))]
+        (mt/with-temp [:model/User {analyst-id :id} {:first_name "Data"
+                                                     :last_name "Analyst"
+                                                     :email "data-analyst@metabase.com"
+                                                     :is_data_analyst true}
+                       :model/PermissionsGroupMembership _ {:user_id analyst-id :group_id data-analyst-group-id}
+                       :model/Database {db-id :id} {}
+                       :model/Table {table-id :id} {:db_id db-id}
+                       :model/Collection _ {:type collection/library-data-collection-type}]
+          (testing "data analyst can edit tables"
+            (is (= {} (mt/user-http-request analyst-id :post 200 "ee/data-studio/table/edit"
+                                            {:table_ids [table-id]
+                                             :data_layer "gold"}))))
+          (testing "data analyst can get selection info"
+            (is (map? (mt/user-http-request analyst-id :post 200 "ee/data-studio/table/selection"
+                                            {:table_ids [table-id]}))))
+          (testing "data analyst can publish tables"
+            (is (map? (mt/user-http-request analyst-id :post 200 "ee/data-studio/table/publish-tables"
+                                            {:table_ids [table-id]}))))
+          (testing "data analyst can unpublish tables"
+            (is (nil? (mt/user-http-request analyst-id :post 204 "ee/data-studio/table/unpublish-tables"
+                                            {:table_ids [table-id]})))))))))
+
+(deftest regular-user-cannot-access-data-studio-test
+  (mt/with-premium-features #{:data-studio}
+    (testing "Regular users (not in Data Analysts group) cannot access data studio endpoints"
+      (mt/with-temp [:model/User {user-id :id} {:first_name "Regular"
+                                                :last_name "User"
+                                                :email "regular-user@metabase.com"}
+                     :model/Database {db-id :id} {}
+                     :model/Table {table-id :id} {:db_id db-id}
+                     :model/Collection _ {:type collection/library-data-collection-type}]
+        (testing "regular user cannot edit tables"
+          (is (= "You don't have permissions to do that."
+                 (mt/user-http-request user-id :post 403 "ee/data-studio/table/edit"
+                                       {:table_ids [table-id]
+                                        :data_layer "gold"}))))
+        (testing "regular user cannot get selection info"
+          (is (= "You don't have permissions to do that."
+                 (mt/user-http-request user-id :post 403 "ee/data-studio/table/selection"
+                                       {:table_ids [table-id]}))))
+        (testing "regular user cannot publish tables"
+          (is (= "You don't have permissions to do that."
+                 (mt/user-http-request user-id :post 403 "ee/data-studio/table/publish-tables"
+                                       {:table_ids [table-id]}))))
+        (testing "regular user cannot unpublish tables"
+          (is (= "You don't have permissions to do that."
+                 (mt/user-http-request user-id :post 403 "ee/data-studio/table/unpublish-tables"
+                                       {:table_ids [table-id]}))))))))
 
 (deftest ^:parallel non-admins-cant-trigger-bulk-sync-test
   (mt/with-premium-features #{:data-studio}

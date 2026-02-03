@@ -4,6 +4,7 @@ import { t } from "ttag";
 import _ from "underscore";
 
 import { TaskStatusBadge } from "metabase/admin/tools/components/TaskStatusBadge";
+import { DateTime } from "metabase/common/components/DateTime";
 import { Ellipsified } from "metabase/common/components/Ellipsified";
 import { SortableColumnHeader } from "metabase/common/components/ItemsTable/BaseItemsTable";
 import { LoadingAndErrorWrapper } from "metabase/common/components/LoadingAndErrorWrapper";
@@ -12,8 +13,12 @@ import CS from "metabase/css/core/index.css";
 import { useDispatch } from "metabase/lib/redux";
 import * as Urls from "metabase/lib/urls";
 import { Box, Flex } from "metabase/ui";
-import type { Database, ListTasksSortColumn, Task } from "metabase-types/api";
-import type { SortingOptions } from "metabase-types/api/sorting";
+import type {
+  Database,
+  ListTasksSortColumn,
+  SortingOptions,
+  Task,
+} from "metabase-types/api";
 
 interface Props {
   databases: Database[];
@@ -110,15 +115,36 @@ export const TasksTable = ({
                   <td className={CS.textBold}>{task.task}</td>
                   <td>{task.db_id ? name || t`Unknown name` : null}</td>
                   <td>{task.db_id ? engine || t`Unknown engine` : null}</td>
+
                   <td>
-                    <Ellipsified style={{ maxWidth: 100 }}>
-                      {task.started_at}
+                    <Ellipsified
+                      style={{ maxWidth: 180 }}
+                      alwaysShowTooltip
+                      tooltip={task.started_at}
+                    >
+                      <DateTime
+                        value={task.started_at}
+                        unit="minute"
+                        data-testid="started-at"
+                      />
                     </Ellipsified>
                   </td>
                   <td>
-                    <Ellipsified style={{ maxWidth: 100 }}>
-                      {task.ended_at}
-                    </Ellipsified>
+                    {task.ended_at ? (
+                      <Ellipsified
+                        style={{ maxWidth: 180 }}
+                        alwaysShowTooltip={Boolean(task.ended_at)}
+                        tooltip={task.ended_at}
+                      >
+                        <DateTime
+                          value={task.ended_at}
+                          unit="minute"
+                          data-testid="ended-at"
+                        />
+                      </Ellipsified>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td>{task.duration}</td>
                   <td>
