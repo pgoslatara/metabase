@@ -78,6 +78,8 @@
 ;;; |                                                     Client                                                     |
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
+(declare get-project-id)
+
 (def ^:private ^PersistentList bigquery-scopes
   "The scopes to use for executing BigQuery requests; see:
   `https://cloud.google.com/bigquery/docs/samples/bigquery-auth-drive-scope`.
@@ -104,6 +106,7 @@
                           (java.util.ArrayList. bigquery-scopes)
                           3600))  ;; 1 hour token lifetime
                        (.createScoped base-creds bigquery-scopes))
+        project-id   (get-project-id details)
         mb-version   (:tag driver-api/mb-version-info)
         run-mode     (name driver-api/run-mode)
         user-agent   (format "Metabase/%s (GPN:Metabase; %s)" mb-version run-mode)
@@ -111,7 +114,8 @@
                          (ImmutableMap/of "user-agent" user-agent))
         bq-bldr      (doto (BigQueryOptions/newBuilder)
                        (.setCredentials final-creds)
-                       (.setHeaderProvider header-provider))]
+                       (.setHeaderProvider header-provider)
+                       (.setProjectId project-id))]
     (when-let [host (not-empty (:host details))]
       (.setHost bq-bldr host))
     (.. bq-bldr build getService)))
@@ -1502,3 +1506,28 @@
       {:success true}
       (finally
         (.close iam-client)))))
+
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                              Native Query Parsing                                              |
+;;; +----------------------------------------------------------------------------------------------------------------+
+
+(defn- split-bigquery-qualified-table
+  "BigQuery uses backticks for quoting, and `dataset.table` is a valid fully qualified reference.
+   Macaw parses this as a single table name with nil schema. This function splits it back.
+   See https://github.com/metabase/macaw/issues/130
+
+   Examples:
+   - {:schema nil :table \"dataset.table\"} -> {:schema \"dataset\" :table \"table\"}
+   - {:schema \"dataset\" :table \"table\"} -> unchanged
+   - {:schema nil :table \"table\"} -> unchanged (no dot)"
+  [{:keys [schema table] :as table-ref}]
+  (if (and (nil? schema) (str/includes? table "."))
+    (let [[dataset table-name] (str/split table #"\." 2)]
+      {:schema dataset :table table-name})
+    table-ref))
+
+(defmethod driver/native-query-table-refs :bigquery-cloud-sdk
+  [driver query]
+  ;; Get table refs from parent :sql implementation, then split any "dataset.table" formats
+  (into #{} (map split-bigquery-qualified-table)
+        ((get-method driver/native-query-table-refs :sql) driver query)))

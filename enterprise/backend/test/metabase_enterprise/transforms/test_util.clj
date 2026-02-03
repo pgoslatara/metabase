@@ -18,15 +18,17 @@
 (defn drop-target!
   "Drop transform target `target` and clean up its metadata.
    `target` can be a string or a map. If `target` is a string, type :table is assumed.
-   If no schema is provided, uses the driver's default schema."
+   If no schema is provided, uses the session schema or driver's default schema."
   [target]
   (let [driver driver/*driver*
+        session-schema-fn (requiring-resolve 'metabase.test.data.sql/session-schema)
         target (cond-> (if (map? target)
                          target
                          ;; assume this is just a plain table name
                          {:type :table, :name target})
                  (and (nil? (:schema target)) (isa? driver/hierarchy driver/*driver* :sql))
-                 (assoc :schema (driver.sql/default-schema driver)))]
+                 (assoc :schema (or (session-schema-fn driver)
+                                    (driver.sql/default-schema driver))))]
     (binding [api/*is-superuser?* true
               api/*current-user-id* (mt/user->id :crowberto)]
       ;; Drop the actual table/view from the database
