@@ -2314,9 +2314,7 @@ LIMIT
         });
         cy.button("Create a transform").click();
         H.popover().findByText("Python script").click();
-        cy.get(".cm-clickable-token")
-          .should("be.visible")
-          .click({ metaKey: true });
+        cy.get(".cm-clickable-token").should("be.visible").click(H.holdMetaKey);
 
         cy.get("@windowOpen").should(
           "have.been.calledWithMatch",
