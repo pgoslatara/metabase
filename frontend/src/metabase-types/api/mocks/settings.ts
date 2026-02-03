@@ -398,5 +398,6 @@ export const createMockSettings = (
   "license-token-missing-banner-dismissal-timestamp": [],
   "sdk-iframe-embed-setup-settings": null,
   "use-tenants": false,
+  "encryption-enabled": false,
   ...opts,
 });

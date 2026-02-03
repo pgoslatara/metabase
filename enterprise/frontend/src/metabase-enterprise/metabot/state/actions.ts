@@ -12,12 +12,12 @@ import { addUndo } from "metabase/redux/undo";
 import { getIsEmbedding } from "metabase/selectors/embed";
 import { getUser } from "metabase/selectors/user";
 import {
-  type JSONValue,
   aiStreamingQuery,
   findMatchingInflightAiStreamingRequests,
 } from "metabase-enterprise/api/ai-streaming";
 import type { ProcessedChatResponse } from "metabase-enterprise/api/ai-streaming/process-stream";
 import type {
+  JSONValue,
   MetabotAgentRequest,
   MetabotAgentResponse,
   MetabotChatContext,
