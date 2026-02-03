@@ -344,9 +344,14 @@ function SearchItemList({ query }: { query: string }) {
 
 export const MiniPickerListLoader = () => (
   <Repeat times={3}>
-    <Box px="sm" py="2px">
-      <Skeleton height="2rem" />
-    </Box>
+    <Flex px="sm" py="2px" h="2rem" align="center">
+      <Skeleton
+        height="1.5rem"
+        width="100%"
+        radius="8px"
+        bg="background-secondary"
+      />
+    </Flex>
   </Repeat>
 );
 
