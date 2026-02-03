@@ -16,6 +16,7 @@ import type Question from "metabase-lib/v1/Question";
 import type {
   CheckDependenciesResponse,
   CollectionNamespace,
+  Database as DatabaseType,
   GetDependencyGraphRequest,
   PythonTransformSourceDraft,
   Transform,
@@ -80,6 +81,10 @@ export type PythonTransformsPlugin = {
   getTransformsNavLinks: () => ReactNode;
 };
 
+export type DatabaseSchemaViewerSectionProps = {
+  database: DatabaseType;
+};
+
 type DependenciesPlugin = {
   isEnabled: boolean;
   getDataStudioDependencyRoutes: () => ReactNode;
@@ -89,6 +94,7 @@ type DependenciesPlugin = {
   CheckDependenciesForm: ComponentType<CheckDependenciesFormProps>;
   CheckDependenciesModal: ComponentType<CheckDependenciesModalProps>;
   CheckDependenciesTitle: ComponentType;
+  DatabaseSchemaViewerSection: ComponentType<DatabaseSchemaViewerSectionProps>;
   useCheckCardDependencies: (
     props: UseCheckDependenciesProps<Question>,
   ) => UseCheckDependenciesResult<Question>;
@@ -180,6 +186,7 @@ const getDefaultPluginDependencies = (): DependenciesPlugin => ({
   CheckDependenciesForm: PluginPlaceholder,
   CheckDependenciesModal: PluginPlaceholder,
   CheckDependenciesTitle: PluginPlaceholder,
+  DatabaseSchemaViewerSection: PluginPlaceholder,
   useCheckCardDependencies: useCheckDependencies,
   useCheckSnippetDependencies: useCheckDependencies,
   useCheckTransformDependencies: useCheckDependencies,

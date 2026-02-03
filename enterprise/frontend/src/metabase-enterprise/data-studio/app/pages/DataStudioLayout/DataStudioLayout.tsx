@@ -143,6 +143,14 @@ function DataStudioNav({ isNavbarOpened, onNavbarToggle }: DataStudioNavProps) {
             />
           )}
           <DataStudioTab
+            label={t`Schema viewer`}
+            icon="database"
+            to={Urls.dataStudioErdBase()}
+            isSelected={currentTab === "schema-viewer"}
+            showLabel={isNavbarOpened}
+            isGated={!hasDependenciesFeature}
+          />
+          <DataStudioTab
             label={t`Glossary`}
             icon="glossary"
             to={Urls.dataStudioGlossary()}
@@ -162,14 +170,6 @@ function DataStudioNav({ isNavbarOpened, onNavbarToggle }: DataStudioNavProps) {
             icon="search_check"
             to={Urls.dependencyDiagnostics()}
             isSelected={currentTab === "dependency-diagnostics"}
-            showLabel={isNavbarOpened}
-            isGated={!hasDependenciesFeature}
-          />
-          <DataStudioTab
-            label={t`ERD`}
-            icon="model"
-            to={Urls.dataStudioErdBase()}
-            isSelected={currentTab === "erd"}
             showLabel={isNavbarOpened}
             isGated={!hasDependenciesFeature}
           />

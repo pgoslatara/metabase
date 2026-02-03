@@ -236,6 +236,19 @@ const TableSectionBase = ({
         >
           {t`Sync settings`}
         </Button>
+        <Tooltip label={t`Schema viewer`}>
+          <Button
+            component={ForwardRefLink}
+            to={Urls.dataStudioErd(table.id)}
+            p="sm"
+            leftSection={<Icon name="dependencies" />}
+            style={{
+              flexGrow: 0,
+              width: 40,
+            }}
+            aria-label={t`Schema viewer`}
+          />
+        </Tooltip>
         <Tooltip label={t`Dependency graph`}>
           <Button
             component={ForwardRefLink}
@@ -279,10 +292,6 @@ const TableSectionBase = ({
               value="measures"
               leftSection={<Icon name="sum" />}
             >{t`Measures`}</Tabs.Tab>
-            <Tabs.Tab
-              value="erd"
-              leftSection={<Icon name="dependencies" />}
-            >{t`ERD`}</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="field">
@@ -362,16 +371,6 @@ const TableSectionBase = ({
 
           <Tabs.Panel value="measures">
             <MeasureList table={table} />
-          </Tabs.Panel>
-
-          <Tabs.Panel value="erd">
-            <Stack align="center" py="xl">
-              <Button
-                component={ForwardRefLink}
-                to={Urls.dataStudioErd(table.id)}
-                leftSection={<Icon name="dependencies" />}
-              >{t`Open Entity Relationship Diagram`}</Button>
-            </Stack>
           </Tabs.Panel>
         </Tabs>
       </Box>
